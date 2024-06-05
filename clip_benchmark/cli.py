@@ -5,6 +5,7 @@ import json
 import os
 import random
 import sys
+sys.path.append("/home/raiymbek/vlm/project2/lilt/LilT")
 from copy import copy
 from itertools import product
 
@@ -19,7 +20,7 @@ from clip_benchmark.metrics import (captioning, image_caption_selection,
                                     zeroshot_retrieval)
 from clip_benchmark.model_collection import (get_model_collection_from_file,
                                              model_collection)
-from clip_benchmark.models import MODEL_TYPES, load_clip
+from clip_benchmark.models import MODEL_TYPES, load_clip, load_lilt
 
 
 def get_parser_args():
@@ -72,6 +73,9 @@ def get_parser_args():
     parser_build.add_argument('files', type=str,  nargs="+", help="path(s) of JSON result files")
     parser_build.add_argument('--output', type=str,  default="benchmark.csv", help="CSV output file")
     parser_build.set_defaults(which='build')
+
+    parser_eval.add_argument('--lilt_config', type=str, default="dinov2-clip-wds-combined.yaml", help="LilT config")
+    parser_eval.add_argument('--lilt_checkpoint', type=str, default="checkpoint_14.pth", help="LilT checkpoint")
 
     args = parser.parse_args()
     return parser, args
@@ -249,13 +253,20 @@ def run(args):
     if args.skip_load:
         model, transform, collate_fn, dataloader = None, None, None, None
     else:
-        model, transform, tokenizer = load_clip(
-            model_type=args.model_type,
-            model_name=args.model,
-            pretrained=args.pretrained,
-            cache_dir=args.model_cache_dir,
-            device=args.device
-        )
+        if "ViT" in args.model:
+            model, transform, tokenizer = load_clip(
+                model_type=args.model_type,
+                model_name=args.model,
+                pretrained=args.pretrained,
+                cache_dir=args.model_cache_dir,
+                device=args.device
+            )
+        elif "lilt" in args.model:
+            model, transform, tokenizer = load_lilt(
+                config = args.lilt_config,
+                checkpoint = args.lilt_checkpoint,
+                device=args.device
+            )
         model.eval()
         if args.model.count("nllb-clip") > 0:
             # for NLLB-CLIP models, we need to set the language prior to running the tests
